@@ -27,6 +27,7 @@ provider:
        Action:
          - "iam:ListSSHPublicKeys"
          - "iam:GetSSHPublicKey"
+         - "iam:GetUser"
        Resource: "*"
 
 functions:
@@ -35,13 +36,6 @@ functions:
       events:
         - http:
             method: get
-            path: sshkeys
+            path: sshkeys/{userId}
             private: true
-            integration: lambda
-            request:
-              template:
-                application/json: '{ "userId" : "$input.params(''userId'')" }'
-              parameters:
-                  queryStringParameters:
-                      userId: true
-
+            integration: lambda-proxy
