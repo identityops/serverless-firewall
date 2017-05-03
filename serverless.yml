@@ -1,0 +1,47 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
+service: firewall
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+# frameworkVersion: "=X.X.X"
+
+provider:
+  name: aws
+  runtime: python2.7
+  apiKeys:
+    - ${opt:stage}-FirewallAPIKey
+  iamRoleStatements:
+    -  Effect: "Allow"
+       Action:
+         - "iam:ListSSHPublicKeys"
+         - "iam:GetSSHPublicKey"
+       Resource: "*"
+
+functions:
+  keyManager:
+      handler: firewalllambda.sshkeys
+      events:
+        - http:
+            method: get
+            path: sshkeys
+            private: true
+            integration: lambda
+            request:
+              template:
+                application/json: '{ "userId" : "$input.params(''userId'')" }'
+              parameters:
+                  queryStringParameters:
+                      userId: true
+
