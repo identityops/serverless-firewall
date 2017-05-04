@@ -80,9 +80,9 @@ chown root:${localSLUser} /etc/default/${localSLUser}
 chmod 640 /etc/default/${localSLUser}
 
 echo "#### Installing ${localSLUser} package"
-/bin/cp -f ${SCRIPTPATH}/firewall-*.py /usr/local/bin/
-chmod 650 /usr/local/bin/firewall-*.py
-chown root:${localSLUser} /usr/local/bin/${localSLUser}-*.py
+/bin/cp -f ${SCRIPTPATH}/firewall-*.* /usr/local/bin/
+chmod 650 /usr/local/bin/firewall-*.*
+chown root:${localSLUser} /usr/local/bin/firewall-*.*
 
 echo "#### Configure SSH server"
 cp /etc/ssh/sshd_config /etc/ssh/sshd_config.${BACKOUT_DATE}
@@ -106,16 +106,16 @@ echo "PasswordAuthentication no" >> /etc/ssh/sshd_config
 echo "#### Restart SSH server"
 service ssh restart
 
-# echo "#### Configure PAM - Add pam_access.so"
-# cp /etc/pam.d/common-account /etc/pam.d/common-account.${BACKOUT_DATE}
-# grep 'pam_access.so' /etc/pam.d/common-account > /dev/null || {
-# cat >> /etc/pam.d/common-account <<EOF
-# account [success=2 default=ignore] pam_succeed_if.so uid < 1000 quiet
-# account sufficient pam_exec.so quiet /usr/local/bin/firewall-authz.py
-# account required pam_deny.so
-# account required pam_access.so
-# EOF
-# }
+echo "#### Configure PAM - Add pam_access.so"
+cp /etc/pam.d/common-account /etc/pam.d/common-account.${BACKOUT_DATE}
+grep 'pam_access.so' /etc/pam.d/common-account > /dev/null || {
+cat >> /etc/pam.d/common-account <<EOF
+account [success=2 default=ignore] pam_succeed_if.so uid < 1000 quiet
+account sufficient pam_exec.so quiet /usr/local/bin/firewall-authz.sh
+account required pam_deny.so
+account required pam_access.so
+EOF
+}
 
 echo "#### Configure PAM - /etc/pam.d/common-auth"
 mv /etc/pam.d/common-auth /etc/pam.d/common-auth.${BACKOUT_DATE}
@@ -123,7 +123,6 @@ cat > /etc/pam.d/common-auth <<EOF
 auth [success=1 default=ignore] pam_succeed_if.so uid >= 1000 quiet
 auth sufficient pam_unix.so nullok_secure
 auth [success=2 default=ignore] pam_succeed_if.so uid < 1000 quiet
-# auth sufficient pam_ldap.so use_first_pass
 auth required pam_deny.so
 EOF
 
