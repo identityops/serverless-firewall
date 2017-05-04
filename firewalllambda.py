@@ -28,6 +28,7 @@ def getResponse(code, body):
         "statusCode": code,
         "body": body
     }
+    print (response)
     return response
 
 

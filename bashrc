@@ -22,3 +22,5 @@ if [ -f "${SSH_ENV}" ]; then
 else
     start_agent;
 fi
+
+cat ~/.ssh/id_rsa.pub

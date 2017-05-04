@@ -49,18 +49,14 @@ fi
 
 logger -i -t Firewall -p info "Starting authorization processing for user: ${sshUserId}"
 
-userAuthorized=false
-
-machineId=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+machineId=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 if [ -z "${machineId}" ]; then
     logger -i -t Firewall -p info "Error reading machine id"
 	exit 1
 fi
 
-curl -s -o /dev/null -w "%{http_code}" -H "x-api-key: ${SL_FIREWALL_API_KEY}" -H "Cache-Control: no-cache" ${SL_FIREWALL_AUTHZ_EP}/${sshUserId}/${machineId}
-
-
-if $userAuthorized; then
+resultCode=$(curl -s -o /dev/null -w "%{http_code}" -H "x-api-key: ${SL_FIREWALL_API_KEY}" -H "Cache-Control: no-cache" ${SL_FIREWALL_AUTHZ_EP}/${sshUserId}/${machineId})
+if [ "${resultCode}" == "200" ]; then
     logger -i -t Firewall -p info "User ${sshUserId} is authorized"   
     exit 0
 else

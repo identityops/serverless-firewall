@@ -110,7 +110,7 @@ echo "#### Configure PAM - Add pam_access.so"
 cp /etc/pam.d/common-account /etc/pam.d/common-account.${BACKOUT_DATE}
 grep 'pam_access.so' /etc/pam.d/common-account > /dev/null || {
 cat >> /etc/pam.d/common-account <<EOF
-account [success=2 default=ignore] pam_succeed_if.so uid < 1000 quiet
+account [success=2 default=ignore] pam_succeed_if.so uid <= 1000 quiet
 account sufficient pam_exec.so quiet /usr/local/bin/firewall-authz.sh
 account required pam_deny.so
 account required pam_access.so
