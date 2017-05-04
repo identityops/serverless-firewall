@@ -23,7 +23,7 @@ import boto3
 import sys
 import logging
 
-def getErrorResponse(code, body):
+def getResponse(code, body):
     response = {
         "statusCode": code,
         "body": body
@@ -31,44 +31,37 @@ def getErrorResponse(code, body):
     return response
 
 
-###################
+############################################################################
 #
 # Returns a set of ssh pubkeys from IAM
 # Input:
-#   userId : IAM userid
+#   pathParameters.userId : IAM userid
+#
+############################################################################
 
 def sshkeys(event, context):
 
-#     keyList = []
-#     keyList.append('ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDB8oEchsorCHBDWEfWRMqQRgbmOPrc+QWDg8iIkV9d8YqS0D5mixJ8amkc0N7TU3ETE3M/KVYaVjvilYsZ200O3PJLJsBNiaCyt4/TZh7df8Vi1SlgxbNtxAP33EfB74g5man+pLL3OWbX6S8ElxxXwWL8GkPZe3+0E3RjH9vYeqDw+iGXfhxF8FJjSCofcbVqJCLiGYUFudv6u/H7jjUpf2U2z2w0sKXlWZUwBSx+uWRauNUDr5oSptrzbSmOUYXK9CKV2aPwMcNdOVqyo/52QKtNKv8UZqCe3bmmgW5Y5htr1e89q1YGdd+T+hgfs8sqwf+EeRY8jvs97WBnL2vL')
-#     keyList.append('ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCwg7iNWVwiZZUjexi/Foi0pZVMH83Y+3K3FNimQmsQyUmkttRqDRgBtJujGkviC3NkPn/dwuCNprJTBwH82pM8LpyvkFxaxUyyo/sYijpLUdAfKRJaoRbgCQN0E9BIIv6q31mCcztOIvRJznWyfDYEiXp6VV9OLr2dVrz8ov27hTXxBWf2P+coiogh/d3HXQjGDnTcBqlqrWG79RByRkhGGPiFB1YXWc8JCTrTDx6zcQR98gMFQAV9/ES4SpQIT0N18ZJBfMZBIbTvT2PlHBzoJ2nGbshILF08EmAvrDKeNHydqHbvHQgY0RdDMbWZ8KPlM9pCVjraJT1SMt502AoR')
-#     response = {
-#         "statusCode": 200,
-#         "keys": json.dumps(keyList)
-#     }
-#     return response
-
     try:
         if 'userId' not in event['pathParameters']:
-            return getErrorResponse(400, "No user id")
+            return getResponse(400, "No user id")
 
         userId = event['pathParameters']['userId']
 
         iam = boto3.client('iam')
         if iam is None:
-            return getErrorResponse(500, "Can not initialize the system")
+            return getResponse(500, "Can not initialize the system")
 
         try:
             userAcct = iam.get_user(UserName=userId)
             if userAcct is None:
-                return getErrorResponse(404, "User doesnt exist in IAM")
+                return getResponse(404, "User doesnt exist in IAM")
 
         except:
-            return getErrorResponse(404, "User doesnt exist in IAM")
+            return getResponse(404, "User doesnt exist in IAM")
 
         keys = iam.list_ssh_public_keys(UserName=userId)
         if keys is None:
-            return getErrorResponse(404, "User has no keys")
+            return getResponse(404, "User has no keys")
 
         keyList = []
         for key in keys['SSHPublicKeys']:
@@ -85,9 +78,72 @@ def sshkeys(event, context):
             }
             return response
         else:
-            return getErrorResponse(404, "User has no active keys")
+            return getResponse(404, "User has no active keys")
 
     except:
         print ('Error executing Firewall: %s' % str(sys.exc_info()[0]))
-        return getErrorResponse(500, "Internal Error occurred")
+        return getResponse(500, "Internal Error occurred")
+
+
+############################################################################
+#
+# Determines if a user is authorized to access a serverGroups
+# Depends on ec2 instances with tags named fwgroup
+#
+# Input:
+#   pathParameters.instanceId
+#
+############################################################################
+
+def authz(event, context):
+    try:
+        if 'pathParameters' not in event:
+            return getResponse(400, "No parameters passed")
+
+        if 'userId' not in event['pathParameters']:
+            return getResponse(400, "No user id")
+
+        if 'instanceId' not in event['pathParameters']:
+            return getResponse(400, "No instance id")
+
+        userId = event['pathParameters']['userId']
+        instanceId = event['pathParameters']['instanceId']
+
+        iam = boto3.client('iam')
+        if iam is None:
+            return getResponse(500, "Can not initialize the system")
+
+        ec2 = boto3.client('ec2')
+        if ec2 is None:
+            return getResponse(500, "Can not initialize the system")
+
+        tagList = ec2.describe_tags(Filters=[
+            {'Name': 'key', 'Values': ['fwgroup']},
+            {'Name': 'resource-type', 'Values': ['instance']},
+            {'Name': 'resource-id', 'Values': [instanceId]}
+        ])
+        if 'Tags' not in tagList:
+            return getResponse(404, "No groups found in for instance: %s" % instanceId )
+
+        serverGroups = []
+        for tag in tagList['Tags']:
+            serverGroups.append(tag['Value'])
+
+        # always append the FirewallAdmins super user group
+        serverGroups.append('FirewallAdmins')
+
+        userGroups = []
+        groupList=iam.list_groups_for_user(UserName=userId)
+        for group in groupList['Groups']:
+            userGroups.append(group['GroupName'])
+
+        assignedGroups=set(serverGroups).intersection(userGroups)
+        if len(assignedGroups) > 0:
+            return getResponse(200, "%s is authorized" % userId)
+        else:
+            return getResponse(401, "%s is not authorized" % userId)
+
+    except:
+        print ('Error executing Firewall: %s' % str(sys.exc_info()[0]))
+        return getResponse(500, "Internal Error occurred")
 
