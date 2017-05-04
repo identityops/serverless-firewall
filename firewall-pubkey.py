@@ -42,7 +42,7 @@ def getKey(sshUserId):
 
         syslog.syslog( syslog.LOG_DEBUG, 'Firewall: Received key request for user: %s ' % sshUserId )
 
-        req = urllib2.Request('%s/%s' % (SL_FIREWALL_HOST, sshUserId))
+        req = urllib2.Request('%s/%s' % (SL_FIREWALL_SSHKEY_EP, sshUserId))
         req.add_header('x-api-key', SL_FIREWALL_API_KEY)
         req.add_header('Cache-Control', 'no-cache')
 
