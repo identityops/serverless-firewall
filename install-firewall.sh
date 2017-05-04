@@ -98,6 +98,11 @@ grep 'AuthorizedKeysCommandUser' /etc/ssh/sshd_config > /dev/null && {
     echo "AuthorizedKeysCommandUser ${localSLUser}" >> /etc/ssh/sshd_config
 }
 
+grep 'AuthorizedKeysCommandUser' /etc/ssh/sshd_config > /dev/null && {
+    sed -i "/PasswordAuthentication/d" /etc/ssh/sshd_config
+}
+echo "PasswordAuthentication no" >> /etc/ssh/sshd_config
+
 echo "#### Restart SSH server"
 service ssh restart
 
