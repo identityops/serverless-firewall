@@ -28,6 +28,8 @@ provider:
          - "iam:ListSSHPublicKeys"
          - "iam:GetSSHPublicKey"
          - "iam:GetUser"
+         - "iam:ListGroupsForUser"
+         - "ec2:DescribeTags"         
        Resource: "*"
 
 functions:
@@ -37,5 +39,14 @@ functions:
         - http:
             method: get
             path: sshkeys/{userId}
+            private: true
+            integration: lambda-proxy
+
+  AuthManager:
+      handler: firewalllambda.authz
+      events:
+        - http:
+            method: get
+            path: authz/{userId}/{instanceId}
             private: true
             integration: lambda-proxy
