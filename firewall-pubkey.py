@@ -24,13 +24,6 @@ import urllib2
 import sys
 import json
 import syslog
-import traceback
-
-
-# SL_FIREWALL_API_KEY='fB9dThiXgz7yIGvC2SiTC8n96udwVbJG2rnoIVj2'
-# SL_FIREWALL_HOST='https://r30xxntys2.execute-api.us-east-1.amazonaws.com/dev/sshkeys'
-# SL_FIREWALL_API_DEBUG=True
-
 
 def getKey(sshUserId):
     sshKeys = ''
@@ -43,11 +36,7 @@ def getKey(sshUserId):
         except:
             syslog.syslog( syslog.LOG_DEBUG, 'Firewall: Error opening firewall config' )
             return
-
-        print ('SL_FIREWALL_API_DEBUG: %s' % SL_FIREWALL_API_DEBUG)
-        print ('SL_FIREWALL_HOST: %s' % SL_FIREWALL_HOST)
-        print ('SL_FIREWALL_API_DEBUG: %s' % SL_FIREWALL_API_DEBUG)
-        
+       
         if SL_FIREWALL_API_DEBUG:
             syslog.setlogmask( syslog.LOG_UPTO(syslog.LOG_DEBUG) )
 
@@ -59,27 +48,30 @@ def getKey(sshUserId):
 
         try:
             resp = urllib2.urlopen(req)
-        except urllib2.HTTPError as e:
-            if e.code == 200:
-                content = resp.read()
-                keyList = json.loads(content)
-                if keyList is not None:
-                    print (keyList)
-                else:
-                    syslog.syslog( syslog.LOG_ALERT, 'Firewall: No keys returned for user %' % sshUserId )
+            content = resp.read()
+            keyList = json.loads(content)
+            
+            if keyList is not None:
+                numKeys = 0
+                for key in keyList:
+                    if numKeys > 0:
+                        sshKeys += '\n'
+                    sshKeys += key
+                    numKeys += 1
+            else:
+                syslog.syslog( syslog.LOG_ALERT, 'Firewall: No keys returned for user %' % sshUserId )
 
-                resp.close()        
-            else if e.code >= 400 and e.code < 500:
-                syslog.syslog( syslog.LOG_ALERT, 'Firewall: Parameter Error for user %, Err: %s ' % ( sshUserId, e.read() ) )
-            else
-                syslog.syslog( syslog.LOG_ERR, 'Firewall: Internal Error for user %, Err: %s ' % ( sshUserId, e.read() ) )
+            resp.close()        
+
+        except urllib2.HTTPError as e:
+            if e.code >= 400 and e.code < 500:
+                syslog.syslog( syslog.LOG_ALERT, 'Firewall: Parameter error for user %, Err: %s ' % ( sshUserId, e.read() ) )
+            else:
+                syslog.syslog( syslog.LOG_ERR, 'Firewall: Internal error for user %, Err: %s ' % ( sshUserId, e.read() ) )
     except:
-        syslog.syslog( syslog.LOG_ALERT, "Firewall: Unexpected error opening config properties: %s" % str(sys.exc_info()[0]) )
-        traceback.print_exc()
-        print ("Unexpected error opening config properties: %s" % str(sys.exc_info()[0]))
+        syslog.syslog( syslog.LOG_ALERT, "Firewall: Internal error opening config properties: %s" % str(sys.exc_info()[0]) )
 
     return sshKeys
-
 
 if __name__ == "__main__":
     if  len(sys.argv) > 1:
