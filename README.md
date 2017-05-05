@@ -12,11 +12,12 @@ Serverless Firewall provide dynamic access control for ssh by integrating AWS IA
   - AWS: Extends to use of IAM to Linux logins
   - Serverless.com: It's Dev and Ops for serverless security!
 
-### Install - Serveless.com
+## Coming Soon - Documentation
+Check back for complete documentation of the project. 
 
 License
 ----
 
-MIT
+Apache 2.0
 
 **Free Software, Hell Yeah!**
